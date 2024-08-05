@@ -17,91 +17,142 @@ const StyledContainer = styled(Container)({
   boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
 });
 
-const InventoryManager = () => {
+const StyledButton = styled(Button)({
+  marginTop: '1rem',
+  backgroundColor: '#6a0dad',
+  color: '#FFF',
+  '&:hover': {
+    backgroundColor: '#4b0082',
+  },
+});
+
+const StyledTableContainer = styled(TableContainer)({
+  marginTop: '2rem',
+  backgroundColor: '#fafafa',
+  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+});
+
+const StyledTableCell = styled(TableCell)({
+  color: '#4b0082',
+  fontWeight: 'bold',
+});
+
+const StyledTextField = styled(TextField)({
+  '& .MuiInputBase-input': {
+    color: '#4b0082',
+  },
+  '& .MuiInputLabel-root': {
+    color: '#4b0082',
+  },
+  '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#4b0082',
+  },
+  '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#6a0dad',
+  },
+  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#4b0082',
+  },
+});
+
+export default function Home() {
   const [item, setItem] = useState({ name: '', quantity: '', price: '' });
   const [inventory, setInventory] = useState([]);
-
-  useEffect(() => {
-    const q = query(collection(db, "inventory"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const items = [];
-      querySnapshot.forEach((doc) => {
-        items.push({ id: doc.id, ...doc.data() });
-      });
-      setInventory(items);
-    });
-
-    return () => unsubscribe();
-  }, []);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleAddItem = async (e) => {
     e.preventDefault();
     if (item.name !== '' && item.quantity !== '' && item.price !== '') {
-      try {
-        await addDoc(collection(db, "inventory"), {
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price
-        });
-        setItem({ name: '', quantity: '', price: '' });
-      } catch (e) {
-        console.error("Error adding document: ", e);
-      }
+      await addDoc(collection(db, 'inventory'), {
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price
+      });
+      setItem({ name: '', quantity: '', price: '' });
     }
   };
 
   const handleDeleteItem = async (id) => {
-    try {
-      await deleteDoc(doc(db, "inventory", id));
-    } catch (e) {
-      console.error("Error deleting document: ", e);
-    }
+    await deleteDoc(doc(db, 'inventory', id));
   };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const snapshot = query(collection(db, 'inventory'));
+      const unsubscribe = onSnapshot(snapshot, (querySnapshot) => {
+        const inventoryData = [];
+        querySnapshot.forEach((doc) => {
+          inventoryData.push({ ...doc.data(), id: doc.id });
+        });
+        setInventory(inventoryData);
+      });
+
+      return () => unsubscribe();
+    }
+  }, []);
+
+  const filteredInventory = inventory.filter(entry =>
+    entry.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <StyledContainer maxWidth="sm">
-      <form onSubmit={handleAddItem}>
-        <TextField
-          label="Item Name"
-          value={item.name}
-          onChange={(e) => setItem({ ...item, name: e.target.value })}
-          fullWidth
-          margin="normal"
-        />
-        <TextField
-          label="Quantity"
-          value={item.quantity}
-          onChange={(e) => setItem({ ...item, quantity: e.target.value })}
-          fullWidth
-          margin="normal"
-        />
-        <TextField
-          label="Price"
-          value={item.price}
-          onChange={(e) => setItem({ ...item, price: e.target.value })}
-          fullWidth
-          margin="normal"
-        />
-        <StyledButton type="submit">Add Item</StyledButton>
-      </form>
-      <TableContainer component={Paper} style={{ marginTop: '2rem' }}>
+      <Typography variant="h4" style={{ marginBottom: '1.5rem', color: '#4b0082', fontFamily: 'Roboto, sans-serif' }}>
+        Inventory Manager
+      </Typography>
+      <StyledTextField
+        label="Search"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        fullWidth
+        margin="normal"
+        variant="outlined"
+      />
+      <StyledTextField
+        label="Item"
+        value={item.name}
+        onChange={(e) => setItem({ ...item, name: e.target.value })}
+        fullWidth
+        margin="normal"
+        variant="outlined"
+      />
+      <StyledTextField
+        label="Quantity"
+        value={item.quantity}
+        onChange={(e) => setItem({ ...item, quantity: e.target.value })}
+        fullWidth
+        margin="normal"
+        variant="outlined"
+      />
+      <StyledTextField
+        label="Price"
+        value={item.price}
+        onChange={(e) => setItem({ ...item, price: e.target.value })}
+        fullWidth
+        margin="normal"
+        variant="outlined"
+      />
+      <StyledButton variant="contained" onClick={handleAddItem}>
+        Add Item
+      </StyledButton>
+      <StyledTableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Quantity</TableCell>
-              <TableCell>Price</TableCell>
-              <TableCell>Actions</TableCell>
+              <StyledTableCell>Item</StyledTableCell>
+              <StyledTableCell align="right">Quantity</StyledTableCell>
+              <StyledTableCell align="right">Price ($)</StyledTableCell>
+              <StyledTableCell align="right">Actions</StyledTableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {inventory.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.name}</TableCell>
-                <TableCell>{item.quantity}</TableCell>
-                <TableCell>{item.price}</TableCell>
-                <TableCell>
-                  <IconButton onClick={() => handleDeleteItem(item.id)}>
+            {filteredInventory.map((entry, index) => (
+              <TableRow key={index}>
+                <TableCell>{entry.name}</TableCell>
+                <TableCell align="right">{entry.quantity}</TableCell>
+                <TableCell align="right">{entry.price}</TableCell>
+                <TableCell align="right">
+                  <IconButton color="secondary" onClick={() => handleDeleteItem(entry.id)}>
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>
@@ -109,9 +160,7 @@ const InventoryManager = () => {
             ))}
           </TableBody>
         </Table>
-      </TableContainer>
+      </StyledTableContainer>
     </StyledContainer>
   );
-};
-
-export default InventoryManager;
+}
