@@ -17,143 +17,91 @@ const StyledContainer = styled(Container)({
   boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
 });
 
-const StyledButton = styled(Button)({
-  marginTop: '1rem',
-  backgroundColor: '#6a0dad',
-  color: '#FFF',
-  '&:hover': {
-    backgroundColor: '#4b0082',
-  },
-});
-
-const StyledTableContainer = styled(TableContainer)({
-  marginTop: '2rem',
-  backgroundColor: '#fafafa',
-  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-});
-
-const StyledTableCell = styled(TableCell)({
-  color: '#4b0082',
-  fontWeight: 'bold',
-});
-
-const StyledTextField = styled(TextField)({
-  '& .MuiInputBase-input': {
-    color: '#4b0082',
-  },
-  '& .MuiInputLabel-root': {
-    color: '#4b0082',
-  },
-  '& .MuiOutlinedInput-root .MuiOutlinedInput-notchedOutline': {
-    borderColor: '#4b0082',
-  },
-  '& .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline': {
-    borderColor: '#6a0dad',
-  },
-  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-    borderColor: '#4b0082',
-  },
-});
-
-export default function Home() {
+const InventoryManager = () => {
   const [item, setItem] = useState({ name: '', quantity: '', price: '' });
   const [inventory, setInventory] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const handleAddItem = async (e) => {
-    e.preventDefault();
-    if (item.name !== '' && item.quantity !== '' && item.price !== '') {
-      await addDoc(collection(db, 'inventory'), {
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price
-      });
-      setItem({ name: '', quantity: '', price: '' });
-    }
-  };
-
-  const handleDeleteItem = async (id) => {
-    await deleteDoc(doc(db, 'inventory', id));
-  };
 
   useEffect(() => {
-    const snapshot = query(collection(db, 'inventory'));
-    const unsubscribe = onSnapshot(snapshot, (querySnapshot) => {
-      const inventoryData = [];
+    const q = query(collection(db, "inventory"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const items = [];
       querySnapshot.forEach((doc) => {
-        inventoryData.push({ ...doc.data(), id: doc.id });
+        items.push({ id: doc.id, ...doc.data() });
       });
-      setInventory(inventoryData);
+      setInventory(items);
     });
 
     return () => unsubscribe();
   }, []);
 
-  const filteredInventory = inventory.filter(entry =>
-    entry.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleAddItem = async (e) => {
+    e.preventDefault();
+    if (item.name !== '' && item.quantity !== '' && item.price !== '') {
+      try {
+        await addDoc(collection(db, "inventory"), {
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price
+        });
+        setItem({ name: '', quantity: '', price: '' });
+      } catch (e) {
+        console.error("Error adding document: ", e);
+      }
+    }
+  };
+
+  const handleDeleteItem = async (id) => {
+    try {
+      await deleteDoc(doc(db, "inventory", id));
+    } catch (e) {
+      console.error("Error deleting document: ", e);
+    }
+  };
 
   return (
     <StyledContainer maxWidth="sm">
-      <Typography variant="h4" style={{ marginBottom: '1.5rem', color: '#4b0082', fontFamily: 'Roboto, sans-serif' }}>
-        Inventory Manager
-      </Typography>
-      <StyledTextField
-        label="Search for items"
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        fullWidth
-        margin="normal"
-        variant="outlined"
-      />
-      <Typography variant="h5" style={{ color: '#4b0082', fontFamily: 'Roboto, sans-serif' }}>
-        Add Item
-      </Typography>
-      <StyledTextField
-        label="Item name"
-        value={item.name}
-        onChange={(e) => setItem({ ...item, name: e.target.value })}
-        fullWidth
-        margin="normal"
-        variant="outlined"
-      />
-      <StyledTextField
-        label="Quantity"
-        value={item.quantity}
-        onChange={(e) => setItem({ ...item, quantity: e.target.value })}
-        fullWidth
-        margin="normal"
-        variant="outlined"
-      />
-      <StyledTextField
-        label="Price ($)"
-        value={item.price}
-        onChange={(e) => setItem({ ...item, price: e.target.value })}
-        fullWidth
-        margin="normal"
-        variant="outlined"
-      />
-      <StyledButton variant="contained" onClick={handleAddItem}>
-        Add Item
-      </StyledButton>
-      <StyledTableContainer component={Paper}>
+      <form onSubmit={handleAddItem}>
+        <TextField
+          label="Item Name"
+          value={item.name}
+          onChange={(e) => setItem({ ...item, name: e.target.value })}
+          fullWidth
+          margin="normal"
+        />
+        <TextField
+          label="Quantity"
+          value={item.quantity}
+          onChange={(e) => setItem({ ...item, quantity: e.target.value })}
+          fullWidth
+          margin="normal"
+        />
+        <TextField
+          label="Price"
+          value={item.price}
+          onChange={(e) => setItem({ ...item, price: e.target.value })}
+          fullWidth
+          margin="normal"
+        />
+        <StyledButton type="submit">Add Item</StyledButton>
+      </form>
+      <TableContainer component={Paper} style={{ marginTop: '2rem' }}>
         <Table>
           <TableHead>
             <TableRow>
-              <StyledTableCell>Item</StyledTableCell>
-              <StyledTableCell align="right">Quantity</StyledTableCell>
-              <StyledTableCell align="right">Price ($)</StyledTableCell>
-              <StyledTableCell align="right">Actions</StyledTableCell>
+              <TableCell>Name</TableCell>
+              <TableCell>Quantity</TableCell>
+              <TableCell>Price</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredInventory.map((entry, index) => (
-              <TableRow key={index}>
-                <TableCell>{entry.name}</TableCell>
-                <TableCell align="right">{entry.quantity}</TableCell>
-                <TableCell align="right">{entry.price}</TableCell>
-                <TableCell align="right">
-                  <IconButton color="secondary" onClick={() => handleDeleteItem(entry.id)}>
+            {inventory.map((item) => (
+              <TableRow key={item.id}>
+                <TableCell>{item.name}</TableCell>
+                <TableCell>{item.quantity}</TableCell>
+                <TableCell>{item.price}</TableCell>
+                <TableCell>
+                  <IconButton onClick={() => handleDeleteItem(item.id)}>
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>
@@ -161,7 +109,9 @@ export default function Home() {
             ))}
           </TableBody>
         </Table>
-      </StyledTableContainer>
+      </TableContainer>
     </StyledContainer>
   );
-}
+};
+
+export default InventoryManager;
